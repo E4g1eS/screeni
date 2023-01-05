@@ -1,5 +1,5 @@
-window.addEventListener("load", main, false);
+window.onload = main;
 
 function main(){
-    document.body.innerHTML += "Successfully included";
+    console.log("loaded");
 }
