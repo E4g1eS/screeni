@@ -1,65 +1,28 @@
-cssStyle = `
+"use strict";
+
+const CSS_STYLE = `
 @import url('http://fonts.cdnfonts.com/css/courier-10-pitch');
 
 body {
 	margin: 0;
 	padding: 0;
-	font-size: 12pt; /* if you multiply by 72 then its in inch */
+	font-size: 12pt; /* if you divide by 72 then its in inch = 0.16666 */
 	margin-top: 1em;
 }
 
-strong {
-	background-color: #ccc;
-	font-weight: normal;
-	border-radius: 0.2em;
-	margin: -0.2em;
-	line-height: 1.2;
-	position: relative;
-	print-color-adjust: exact !important;
-	-webkit-print-color-adjust: exact !important;
-}
-
-#paper {
+.paper {
 	width: 51em; /* 8.5in */
+	height: 66em; /* 11in */
 	border: 1px solid black;
 	font-family: 'Courier 10 Pitch', 'Courier New', monospace;
 	line-height: 1;
 	margin: auto;
-	
-	
-	margin-right: 1em;
-	
-	margin-bottom: 6em;
-	padding: 0;
-	padding-bottom: 6em;
-}
+	margin-bottom: 2em;
 
-#inputForm {
-	position: fixed;
-	margin-left: 1em;
-	width: calc(100% - 51em - 2em - 1em);
-	height: calc(100% - 0.2in);
-}
-
-#inputTextarea {
-	width: 100%;
-	max-width: 100%;
-	height: 100%;
-	resize: none;
+	background-color: #fefde6;
 
 	box-sizing: border-box;
-	border: 2px solid #ccc;
-	border-radius: 4px;
-	background-color: #f8f8f8;
-
-	padding: 1em;
-
-	font-family: 'Courier 10 Pitch', 'Courier New', monospace;
-	font-size: 12pt;
-}
-
-#fileInput {
-	display: none !important;
+	padding: 3em 0;
 }
 
 p {
@@ -73,14 +36,11 @@ p {
 	margin-top: 10em;
 	margin-bottom: 1em;
 	
-	page-break-before: always;
-	
 	text-decoration: underline;
 }
 
 .center {
 	text-align: center;
-	
 	margin-top: 1em;
 }
 
@@ -129,45 +89,30 @@ p {
 	text-transform: uppercase;
 }
 
-@media print {
-	#paper {
-		border: 0;
-	}
-	
-	strong {
-		background-color: #ddd;
-	}
-
-	.title {
-		margin-top: 0;
-	}
-
-	#inputForm {
-		display: none !important;
-	}
-}
-
-@media screen and (max-width: 14in) {
-	#paper {
+@media screen and (max-width: 8.8in) {
+	.paper {
 		background-color: #fee;
 	}
 	
 	body {
-		font-size: 1vw;
-	}
-	
-	#inputTextarea {
-		font-size: 1vw;
+		font-size: 1.8vw;
 	}
 }
-`
+`;
 
 // ####################################################################################
 
-function processPaper() {
+const DEBUG = true;
 
-	let paper = document.getElementById("paper");
-	let lines = paper.innerHTML.split(/\r\n|\n\r|\n|\r/);
+function debug(text) {
+	if (DEBUG) {
+		console.log(text);
+	}
+}
+
+function parseElement(element) {
+
+	let lines = element.innerHTML.split(/\r\n|\n\r|\n|\r/);
 
 	let transformedHTML = "";
 
@@ -225,97 +170,108 @@ function processPaper() {
 			result += "</p>";
 		}
 		
-		let indexStarLeft = -1;
-		let indexStarRight = -1;
-		while ((indexStarLeft = result.indexOf("*")) != -1) {
-		
-			if ((indexStarRight = result.indexOf("*", indexStarLeft + 1)) == -1) {
-				break;
-			}
-			
-			result = result.substring(0, indexStarLeft) + "<strong>" + result.substring(indexStarLeft + 1, indexStarRight) + "</strong>" + result.substring(indexStarRight + 1);
-		}
-		
 		transformedHTML += result;
 	}
 
-	paper.innerHTML = transformedHTML;
+	element.innerHTML = transformedHTML;
 }
 
-function onInput() {
+let app;
 
-	let paper = document.getElementById("paper");
-	let inputTextarea = document.getElementById("inputTextarea");
+class App {
+	#paper;
+	#pages;
 
-	paper.innerHTML = inputTextarea.value;
-
-	processPaper();
-
-	//console.log("Changed.");
-}
-
-function onSelect() {
-	//console.log("Selected.");
-}
-
-function start() {
-    let style = document.createElement("style");
-    style.innerHTML = cssStyle;
-    document.head.appendChild(style);
-
-	let paper = document.getElementById("paper");
-	let inputTextarea = document.getElementById("inputTextarea");
-
-
-	inputTextarea.value = paper.innerHTML.trim();
-	//console.log("Started");
-	processPaper();
-}
-
-function saveSource() {
-
-	let text = document.getElementById("inputTextarea").value;
-	let file = new Blob([text], {type: "text/plain;charset=utf-8"});
-
-	let element = document.createElement("a");
-	element.href = URL.createObjectURL(file);
-	element.download =  "script-source.txt";
-	element.style.display = "none";
-
-	document.body.appendChild(element);
-	element.click();
-	//console.log("Clicked.");
-	document.body.removeChild(element);
-}
-
-function onFileInputChange() {
-	let fileReader = new FileReader();
-	
-	fileReader.onload = function() {
-		let paper = document.getElementById("paper");
-		paper.innerHTML = fileReader.result;
-		start();
+	constructor() {
+		debug("Initializing application...");
+		this.#styleDocument();
+		this.#initPaper();
+		this.#splitPaper();
+		this.#paper.remove();
 	}
-	
-	let fileInput = document.getElementById("fileInput");
-	
-	fileReader.readAsText(fileInput.files[0]);
-}
 
-function openSource() {
-	document.getElementById("fileInput").click();
-}
-
-document.onkeydown = (e) => {
-	if (e.ctrlKey && e.key === 's') {
-		e.preventDefault();
-		saveSource();
+	#styleDocument() {
+		let style = document.createElement("style");
+		style.innerHTML = CSS_STYLE;
+		document.head.appendChild(style);
 	}
-	
-	if (e.ctrlKey && e.key === 'o') {
-		e.preventDefault();
-		openSource();
+
+	#initPaper() {
+		this.#paper = document.createElement("div");
+		this.#paper.classList.add("paper");
+		this.#paper.innerHTML = document.body.innerHTML;
+		parseElement(this.#paper);
+		document.body.innerHTML = "";
+		document.body.appendChild(this.#paper);
+	}
+
+	#splitPaper() {
+		this.#pages = [];
+		let paragraphs = Array.from(this.#paper.getElementsByTagName("p"));
+		let paperBottomline = this.#getPaperBottomline();
+
+		while (paragraphs.length != 0)
+		{
+			debug(`Creating page ${this.#pages.length}`);
+			let newPage = this.#newPage();
+			
+			debug(`Number or paragraphs remaining on paper = ${paragraphs.length}`);
+
+			let nofitIndex = -1;
+			for (let i = 0; i < paragraphs.length; i++)
+			{
+				let paragraphBottomline = paragraphs[i].getBoundingClientRect().bottom;
+
+				if (paragraphBottomline > paperBottomline)
+				{
+					nofitIndex = i;
+					break;
+				}
+			}
+
+			debug(`Paragraph ${nofitIndex} does not fit.`);
+
+			if (nofitIndex == 0)
+			{
+				debug("One paragraph is too large for one page");
+				break;
+			}
+
+			if (nofitIndex == -1)
+			{
+				newPage.append(...paragraphs);
+				break;
+			}
+
+			for (let i = 0; i < nofitIndex; i++)
+			{
+				newPage.appendChild(paragraphs[0]);
+				paragraphs.shift();
+			}
+
+			this.#pages.push(newPage);
+		}
+	}
+
+	#newPage() {
+		let page = document.createElement("div");
+		page.classList.add("paper");
+		document.body.appendChild(page);
+		return page;
+	}
+
+	#getPaperBottomline() {
+		let paperRect = this.#paper.getBoundingClientRect();
+		let paperStyle = window.getComputedStyle(this.#paper);
+		let paperPadding = paperStyle.getPropertyValue("padding-bottom");
+		let paperBorder = paperStyle.getPropertyValue("border-bottom-width");
+		let paperBottom = paperRect.bottom - parseInt(paperPadding, 10) - parseInt(paperBorder, 10);
+		return paperBottom;
 	}
 }
 
-window.onload = start;
+function init() {
+	app = new App();
+}
+
+window.onload = init;
