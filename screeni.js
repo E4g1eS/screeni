@@ -4,7 +4,7 @@
 // CSS
 // ####################################################################################
 
-/** Variable that contains the whole CSS.
+/** Constant that contains the whole CSS.
  * @type {string}
 */
 const CSS_STYLE = `
@@ -14,7 +14,6 @@ body {
 	margin: 0;
 	padding: 0;
 	font-size: 12pt; /* if you divide by 72 then its in inch = 0.16666 */
-	margin-top: 1em;
 }
 
 p {
@@ -31,7 +30,7 @@ p {
 
 	font-family: 'Courier 10 Pitch', 'Courier New', monospace;
 	line-height: 1;
-	margin: auto;
+	margin: 1em auto;
 
 	background-color: #fefde6;
 
@@ -358,8 +357,10 @@ class App {
 	*/
 	#pages;
 
-	/** Start the application. */
-	constructor() {
+	/** Start the application.
+	 * @param {HTMLDivElement} [container=null] Div which the app should take as its parent. Body is considered parent if null.
+	*/
+	constructor(container = null) {
 		debug("Initializing application...");
 
 		debug("Moving body into variable...");
@@ -419,10 +420,24 @@ class App {
 	}
 }
 
+/** Global reference to app(s).
+ * @type {App|App[]}
+*/
 let app;
 
+/** Entrypoint. */
 function init() {
-	app = new App();
+	let containers = document.body.querySelectorAll("div.screeni");
+
+	if (containers.length == 0) {
+		app = new App();
+		return;
+	}
+
+	app = [];
+	containers.forEach((div) => {
+		app.push(new App(div));
+	});
 }
 
 window.onload = init;
